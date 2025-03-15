@@ -7,9 +7,12 @@ import (
 )
 
 func TestTCPTransporter(t *testing.T) {
-	listenAddr := ":4000"
-	tr := NewTCPTransporter(listenAddr)
+	opts := TCPTransporterOpts{
+		ListenAddr:    ":4000",
+		HandshakeFunc: NOOPHandshakeFunc,
+	}
+	tr := NewTCPTransporter(opts)
 
-	assert.Equal(t, tr.listenAddr, listenAddr)
+	assert.Equal(t, tr.ListenAddr, opts.ListenAddr)
 	assert.Nil(t, tr.Listen())
 }
