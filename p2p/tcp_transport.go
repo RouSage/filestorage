@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"errors"
 	"fmt"
 	"net"
 )
@@ -32,6 +33,7 @@ type TCPTransporterOpts struct {
 	ListenAddr    string
 	HandshakeFunc HandshakeFunc
 	Decoder       Decoder
+	OnPeer        func(Peer) error
 }
 
 type TCPTransporter struct {
@@ -80,19 +82,35 @@ func (t *TCPTransporter) startAcceptLoop() error {
 }
 
 func (t *TCPTransporter) handleConn(conn net.Conn) {
+	var err error
+
+	defer func() {
+		fmt.Printf("dropping peer connection: %s\n", err)
+		conn.Close()
+	}()
+
 	peer := NewTCPPeer(conn, true)
 
-	if err := t.HandshakeFunc(peer); err != nil {
-		conn.Close()
-		fmt.Printf("TCP handshake error: %s\n", err)
+	if err = t.HandshakeFunc(peer); err != nil {
 		return
+	}
+
+	if t.OnPeer != nil {
+		if err = t.OnPeer(peer); err != nil {
+			return
+		}
 	}
 
 	// Read loop
 	rpc := RPC{}
 	for {
-		if err := t.Decoder.Decode(conn, &rpc); err != nil {
-			fmt.Printf("TCP decode error: %s\n", err)
+		err = t.Decoder.Decode(conn, &rpc)
+		if errors.Is(err, net.ErrClosed) {
+			return
+		}
+
+		if err != nil {
+			fmt.Printf("TCP read error: %s\n", err)
 			continue
 		}
 
