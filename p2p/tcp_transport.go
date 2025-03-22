@@ -87,6 +87,8 @@ func (t *TCPTransporter) handleConn(conn net.Conn) {
 			continue
 		}
 
+		msg.From = conn.RemoteAddr()
+
 		fmt.Printf("received message: %+v\n", msg)
 	}
 }
