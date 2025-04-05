@@ -23,5 +23,9 @@ func TestPathTransformFunc(t *testing.T) {
 	key := "mybestpicture"
 	pathname := CASPathTransformFunc(key)
 
-	assert.Equal(t, "be17b/32c28/70b1c/0c73b/59949/db6a3/be781/4dd23", pathname)
+	expected := "be17b/32c28/70b1c/0c73b/59949/db6a3/be781/4dd23"
+	expectedOriginal := "be17b32c2870b1c0c73b59949db6a3be7814dd23"
+
+	assert.Equal(t, expected, pathname.Pathname)
+	assert.Equal(t, expectedOriginal, pathname.Original)
 }

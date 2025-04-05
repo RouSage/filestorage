@@ -9,23 +9,35 @@ import (
 	"path"
 )
 
-func CASPathTransformFunc(key string) string {
+func CASPathTransformFunc(key string) PathKey {
 	hash := sha1.Sum([]byte(key))
-	hasStr := hex.EncodeToString(hash[:])
+	hashStr := hex.EncodeToString(hash[:])
 
 	blocksize := 5
-	sliceLen := len(hasStr) / blocksize
+	sliceLen := len(hashStr) / blocksize
 	paths := make([]string, sliceLen)
 
 	for i := 0; i < sliceLen; i++ {
 		from, to := i*blocksize, (i*blocksize)+blocksize
-		paths[i] = hasStr[from:to]
+		paths[i] = hashStr[from:to]
 	}
 
-	return path.Join(paths...)
+	return PathKey{
+		Pathname: path.Join(paths...),
+		Original: hashStr,
+	}
 }
 
-type PathTransformFunc func(string) string
+type PathTransformFunc func(string) PathKey
+
+type PathKey struct {
+	Pathname string
+	Original string
+}
+
+func (p PathKey) Filename() string {
+	return path.Join(p.Pathname, p.Original)
+}
 
 type StoreOpts struct {
 	PathTransformFunc PathTransformFunc
@@ -46,13 +58,12 @@ func NewStore(opts StoreOpts) *Store {
 }
 
 func (s *Store) writeStream(key string, r io.Reader) error {
-	pathname := s.PathTransformFunc(key)
-	if err := os.MkdirAll(pathname, os.ModePerm); err != nil {
+	pathKey := s.PathTransformFunc(key)
+	if err := os.MkdirAll(pathKey.Pathname, os.ModePerm); err != nil {
 		return err
 	}
 
-	filename := "somefilename"
-	fullPath := path.Join(pathname, filename)
+	fullPath := pathKey.Filename()
 
 	f, err := os.Create(fullPath)
 	if err != nil {
