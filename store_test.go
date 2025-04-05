@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,11 +13,20 @@ func TestStore(t *testing.T) {
 		PathTransformFunc: CASPathTransformFunc,
 	}
 	s := NewStore(opts)
+	key := "mybestpicture"
+	data := []byte("some jpeg bytes")
 
-	data := bytes.NewReader([]byte("some jpeg bytes"))
-	err := s.writeStream("mypicture", data)
-
+	// write data to file
+	err := s.writeStream(key, bytes.NewReader(data))
 	assert.Nil(t, err)
+
+	// read data from file
+	r, err := s.Read(key)
+	assert.Nil(t, err)
+
+	b, err := io.ReadAll(r)
+	assert.Nil(t, err)
+	assert.Equal(t, data, b)
 }
 
 func TestPathTransformFunc(t *testing.T) {
@@ -27,5 +37,5 @@ func TestPathTransformFunc(t *testing.T) {
 	expectedOriginal := "be17b32c2870b1c0c73b59949db6a3be7814dd23"
 
 	assert.Equal(t, expected, pathname.Pathname)
-	assert.Equal(t, expectedOriginal, pathname.Original)
+	assert.Equal(t, expectedOriginal, pathname.Filename)
 }
