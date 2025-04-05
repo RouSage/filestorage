@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"io"
 	"log"
 	"os"
 	"path"
+	"strings"
 )
 
 func CASPathTransformFunc(key string) PathKey {
@@ -40,6 +42,16 @@ func (p PathKey) FullPath() string {
 	return path.Join(p.Pathname, p.Filename)
 }
 
+func (p PathKey) Root() string {
+	paths := strings.Split(p.Pathname, "/")
+
+	if len(paths) == 0 {
+		return ""
+	}
+
+	return paths[0]
+}
+
 type StoreOpts struct {
 	PathTransformFunc PathTransformFunc
 }
@@ -56,6 +68,24 @@ func NewStore(opts StoreOpts) *Store {
 	return &Store{
 		StoreOpts: opts,
 	}
+}
+
+func (s *Store) Has(key string) bool {
+	pathKey := s.PathTransformFunc(key)
+
+	_, err := os.Stat(pathKey.FullPath())
+
+	return !errors.Is(err, os.ErrNotExist)
+}
+
+func (s *Store) Delete(key string) error {
+	pathKey := s.PathTransformFunc(key)
+
+	defer func() {
+		log.Printf("deleted [%s] from disk", pathKey.Filename)
+	}()
+
+	return os.RemoveAll(pathKey.Root())
 }
 
 func (s *Store) Read(key string) (io.Reader, error) {
