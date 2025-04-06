@@ -18,7 +18,7 @@ func TestStore(t *testing.T) {
 		data := []byte("some jpeg bytes")
 
 		// write data to file
-		err := s.writeStream(key, bytes.NewReader(data))
+		err := s.Write(key, bytes.NewReader(data))
 		assert.Nil(t, err)
 
 		// file should exist
