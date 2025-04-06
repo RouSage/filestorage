@@ -13,8 +13,8 @@ help:
 # ==================================== #
 
 .PHONY: run
-run:
-	go run main.go
+run: build
+	./bin/fs
 
 # ==================================== #
 # QUALITY CHECK
