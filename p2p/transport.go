@@ -11,4 +11,5 @@ type Peer interface {
 type Transporter interface {
 	Listen() error
 	Consume() <-chan RPC
+	Close() error
 }

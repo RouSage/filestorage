@@ -56,6 +56,11 @@ func (t *TCPTransporter) Consume() <-chan RPC {
 	return t.rpcch
 }
 
+// Close implements the Transporter interface, which will close the underlying listener.
+func (t *TCPTransporter) Close() error {
+	return t.listener.Close()
+}
+
 func (t *TCPTransporter) Listen() error {
 	var err error
 
@@ -71,10 +76,14 @@ func (t *TCPTransporter) Listen() error {
 	return nil
 }
 
-func (t *TCPTransporter) startAcceptLoop() error {
+func (t *TCPTransporter) startAcceptLoop() {
 	for {
 		conn, err := t.listener.Accept()
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return
+			}
+
 			fmt.Printf("TCP accept error: %s\n", err)
 		}
 
@@ -108,10 +117,6 @@ func (t *TCPTransporter) handleConn(conn net.Conn) {
 	rpc := RPC{}
 	for {
 		err = t.Decoder.Decode(conn, &rpc)
-		if errors.Is(err, net.ErrClosed) {
-			return
-		}
-
 		if err != nil {
 			fmt.Printf("TCP read error: %s\n", err)
 			continue
