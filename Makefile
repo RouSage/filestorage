@@ -45,7 +45,7 @@ audit:
 # test: run tests
 .PHONY: test
 test:
-	go test -v ./...
+	go test ./...
 
 # ==================================== #
 # BUILD
