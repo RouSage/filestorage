@@ -20,6 +20,9 @@ func TestStore(t *testing.T) {
 	err := s.writeStream(key, bytes.NewReader(data))
 	assert.Nil(t, err)
 
+	exists := s.Has(key)
+	assert.Equal(t, true, exists)
+
 	// read data from file
 	r, err := s.Read(key)
 	assert.Nil(t, err)
@@ -27,6 +30,28 @@ func TestStore(t *testing.T) {
 	b, err := io.ReadAll(r)
 	assert.Nil(t, err)
 	assert.Equal(t, data, b)
+
+	s.Delete(key)
+}
+
+func TestStoreHas(t *testing.T) {
+	opts := StoreOpts{
+		PathTransformFunc: CASPathTransformFunc,
+	}
+	s := NewStore(opts)
+	key := "mybestpicture"
+
+	// check if file exists
+	exists := s.Has(key)
+	assert.Equal(t, false, exists)
+
+	// write data to file
+	err := s.writeStream(key, bytes.NewReader([]byte("some jpeg bytes")))
+	assert.Nil(t, err)
+
+	// check if file exists
+	exists = s.Has(key)
+	assert.Equal(t, true, exists)
 
 	s.Delete(key)
 }

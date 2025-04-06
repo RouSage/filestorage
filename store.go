@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+const defaultRoot = "storage"
+
 func CASPathTransformFunc(key string) PathKey {
 	hash := sha1.Sum([]byte(key))
 	hashStr := hex.EncodeToString(hash[:])
@@ -53,11 +55,16 @@ func (p PathKey) Root() string {
 }
 
 type StoreOpts struct {
+	// Root is the folder name of the root, containing all the files/folders of the system.
+	Root              string
 	PathTransformFunc PathTransformFunc
 }
 
-var DefaultPathTransformFunc = func(key string) string {
-	return key
+var DefaultPathTransformFunc = func(key string) PathKey {
+	return PathKey{
+		Pathname: key,
+		Filename: key,
+	}
 }
 
 type Store struct {
@@ -65,6 +72,13 @@ type Store struct {
 }
 
 func NewStore(opts StoreOpts) *Store {
+	if opts.PathTransformFunc == nil {
+		opts.PathTransformFunc = DefaultPathTransformFunc
+	}
+	if len(opts.Root) == 0 {
+		opts.Root = defaultRoot
+	}
+
 	return &Store{
 		StoreOpts: opts,
 	}
@@ -73,7 +87,7 @@ func NewStore(opts StoreOpts) *Store {
 func (s *Store) Has(key string) bool {
 	pathKey := s.PathTransformFunc(key)
 
-	_, err := os.Stat(pathKey.FullPath())
+	_, err := os.Stat(path.Join(s.Root, pathKey.FullPath()))
 
 	return !errors.Is(err, os.ErrNotExist)
 }
@@ -85,7 +99,7 @@ func (s *Store) Delete(key string) error {
 		log.Printf("deleted [%s] from disk", pathKey.Filename)
 	}()
 
-	return os.RemoveAll(pathKey.Root())
+	return os.RemoveAll(path.Join(s.Root, pathKey.Root()))
 }
 
 func (s *Store) Read(key string) (io.Reader, error) {
@@ -103,16 +117,17 @@ func (s *Store) Read(key string) (io.Reader, error) {
 
 func (s *Store) readStream(key string) (io.ReadCloser, error) {
 	pathKey := s.PathTransformFunc(key)
-	return os.Open(pathKey.FullPath())
+	return os.Open(path.Join(s.Root, pathKey.FullPath()))
 }
 
 func (s *Store) writeStream(key string, r io.Reader) error {
 	pathKey := s.PathTransformFunc(key)
-	if err := os.MkdirAll(pathKey.Pathname, os.ModePerm); err != nil {
+	pathname := path.Join(s.Root, pathKey.Pathname)
+	if err := os.MkdirAll(pathname, os.ModePerm); err != nil {
 		return err
 	}
 
-	fullPath := pathKey.FullPath()
+	fullPath := path.Join(s.Root, pathKey.FullPath())
 
 	f, err := os.Create(fullPath)
 	if err != nil {
